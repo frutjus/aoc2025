@@ -9,6 +9,8 @@ def List.scan (f: α → β → α) (init: α) (l: List β) : List α :=
     | _, _ => panic! "unexpected") [init]
   |> List.reverse
 
+abbrev return_type_of (_: α → β) := β
+
 -- puzzle-specific stuff
 def parse (input : String) :=
   input.lines.map λl =>
@@ -28,7 +30,7 @@ def rotate (state: (Int × Int)) (move: Int) : (Int × Int) :=
       else ((100 - dial) % 100 - move) / 100
   (dial', zero_passes')
 
-def solve (input : List Int) :=
+def solve (input : return_type_of parse) :=
   input.foldl rotate (50, 0)
   |> Prod.snd
 
