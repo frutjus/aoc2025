@@ -1,0 +1,37 @@
+-- general-purpose stuff
+def String.lines (str : String) : List String :=
+  str.replace "\r" ""
+  |> (String.splitOn · "\n")
+
+def List.scan (f: α → β → α) (init: α) (l: List β) : List α :=
+  l.foldl (λ
+    | s::ss, c => (f s c)::s::ss
+    | _, _ => panic! "unexpected") [init]
+  |> List.reverse
+
+abbrev return_type_of (_: α → β) := β
+
+-- puzzle-specific stuff
+def parse (input : String) :=
+  input.splitOn ","
+  |> Functor.map λstr =>
+    match str.splitOn "-" with
+      range_start :: range_end :: [] => (range_start.toInt!, range_end.toInt!)
+      _ => panic! "unexpected"
+
+def solve (input : return_type_of parse) :=
+  input
+
+def answer (filepath : System.FilePath) : IO Unit := do
+  IO.println "file:"
+  IO.println filepath
+  let raw ← IO.FS.readFile filepath
+  let parsed := parse raw
+  IO.println "\nparse:"
+  IO.println parsed
+  let solved := solve parsed
+  IO.println "\nsolution:"
+  IO.println solved
+
+#eval answer "day1/sample.txt"
+#eval answer "day1/input.txt"
