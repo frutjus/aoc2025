@@ -66,24 +66,34 @@ def List.maximumby [Inhabited α] (f: α → α → Ordering) (l: List α): α :
 
 -- puzzle-specific stuff
 def parse (input: String) :=
-  let (fresh_str, avail_str) := (input.replace "\r" "").split_pair "\n\n"
+  let (fresh_str, _) := (input.replace "\r" "").split_pair "\n\n"
   let fresh := fresh_str.lines.map (λl =>
     let (s, e) := String.split_pair l "-"
     (s.toNat!, e.toNat!)
     )
-  let avail := avail_str.lines.map String.toNat!
-  (fresh, avail)
+  fresh
+
+def insert_range (ranges: List (Nat × Nat)) (new_range: Nat × Nat): List (Nat × Nat) :=
+  let (s,e) := new_range
+  match ranges with
+    | [] => [new_range]
+    | (s',e') :: ranges' =>
+      if e < s' - 1 then
+        new_range :: ranges
+      else if s > e' + 1 then
+        (s',e') :: insert_range ranges' new_range
+      else
+        insert_range ranges' (min s s', max e e')
+
 
 def solve (input: return_type_of parse) :=
-  let (fresh, avail) := input
   Id.run do
-    let mut fresh_count := 0
-    for ingr in avail do
-      for (s,e) in fresh do
-        if s <= ingr ∧ ingr <= e then
-          fresh_count := fresh_count + 1
-          break
-    return fresh_count
+    let mut fresh_ranges := []
+    for rng in input do
+      fresh_ranges := insert_range fresh_ranges rng
+    return fresh_ranges
+  |> Functor.map (λ(s,e) => e - s + 1)
+  |> List.sum
 
 def answer (filepath: System.FilePath): IO Unit := do
   let start_time ← IO.monoMsNow
