@@ -81,32 +81,27 @@ partial def List.transpose: List (List α) → List (List α)
           tails := tl :: tails
     return heads.reverse :: tails.reverse.transpose
 
--- puzzle-specific stuff
-def String.to_op: String → (Nat → Nat → Nat) × Nat
-  | "+" => (Add.add, 0)
-  | "*" => (Mul.mul, 1)
-  | _ => panic! "someone messed up"
+def List.with_indices (l: List α): List (α × Nat) :=
+  l.zip (List.range l.length)
 
-def parse (input: String) :=
-  let raw_rows := input.lines
-  let operations :=
-    raw_rows.last.splitOn " "
-    |> List.filter (· != "")
-  let operandses :=
-    raw_rows.dropLast.map String.toList
-    |> List.transpose
-    |> Functor.map (λx => (x.filter (· != ' ')).asString)
-    |> List.splitBy (λ_ x => x != "")
-    |> Functor.map (λxs =>
-      xs.filter (· != "")
-      |> Functor.map String.toNat!)
-  operandses.zip operations
+-- puzzle-specific stuff
+def parse (input: String): Array (Array ((Nat × Nat) × Char)) :=
+  input.lines.with_indices.toArray.map λ(l,r) =>
+    l.toList.with_indices.toArray.map λ(v,c) =>
+      ((r, c), v)
 
 def solve (input: return_type_of parse) :=
-  input.map (λ(xs, opstr) =>
-    let (op,z) := opstr.to_op
-    xs.foldl op z)
-  |> List.sum
+  let timelines: Array (Array Nat) := input.map λrow => row.map λ((r,c),_) =>
+    if r == input.size then
+      1
+    else if input[r+1]![c]!.snd == '^' then
+      2
+    else
+      1
+  let (start_row, start_col) := input[0]!.toList.dropWhile (·.snd != 'S')
+    |> List.head!
+    |> Prod.fst
+  timelines
 
 def answer (filepath: System.FilePath): IO Unit := do
   let start_time ← IO.monoMsNow
@@ -121,6 +116,6 @@ def answer (filepath: System.FilePath): IO Unit := do
   let time_delta := end_time - start_time
   IO.println s!"\ntime (ms) = {time_delta}"
 
-def day: System.FilePath := "day6"
+def day: System.FilePath := "day7"
 #eval answer $ day/"sample.txt"
-#eval answer $ day/"input.txt"
+--#eval answer $ day/"input.txt"

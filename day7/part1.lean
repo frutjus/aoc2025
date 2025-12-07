@@ -81,32 +81,27 @@ partial def List.transpose: List (List α) → List (List α)
           tails := tl :: tails
     return heads.reverse :: tails.reverse.transpose
 
+def List.with_indices (l: List α): List (α × Nat) :=
+  l.zip (List.range l.length)
+
 -- puzzle-specific stuff
-def String.to_op: String → (Nat → Nat → Nat) × Nat
-  | "+" => (Add.add, 0)
-  | "*" => (Mul.mul, 1)
-  | _ => panic! "someone messed up"
-
 def parse (input: String) :=
-  let raw_rows := input.lines
-  let operations :=
-    raw_rows.last.splitOn " "
-    |> List.filter (· != "")
-  let operandses :=
-    raw_rows.dropLast.map String.toList
-    |> List.transpose
-    |> Functor.map (λx => (x.filter (· != ' ')).asString)
-    |> List.splitBy (λ_ x => x != "")
-    |> Functor.map (λxs =>
-      xs.filter (· != "")
-      |> Functor.map String.toNat!)
-  operandses.zip operations
+  input.lines.map (λl =>
+    l.toList.with_indices.filter (·.fst != '.')
+    |> Functor.map Prod.snd)
 
-def solve (input: return_type_of parse) :=
-  input.map (λ(xs, opstr) =>
-    let (op,z) := opstr.to_op
-    xs.foldl op z)
-  |> List.sum
+def solve (input: return_type_of parse) := match input with
+  | starts :: splitterses => Id.run do
+    let mut beams := starts
+    let mut total_splits := 0
+    for splitters in splitterses do
+      let (split_beams, unsplitbeams) := beams.partition splitters.contains
+      total_splits := total_splits + split_beams.length
+      beams := (split_beams.map (· - 1)
+             ++ split_beams.map (· + 1)
+             ++ unsplitbeams).dedup
+    return total_splits
+  | _ => panic! "bet you 50 bucks this'll never happen"
 
 def answer (filepath: System.FilePath): IO Unit := do
   let start_time ← IO.monoMsNow
@@ -121,6 +116,6 @@ def answer (filepath: System.FilePath): IO Unit := do
   let time_delta := end_time - start_time
   IO.println s!"\ntime (ms) = {time_delta}"
 
-def day: System.FilePath := "day6"
+def day: System.FilePath := "day7"
 #eval answer $ day/"sample.txt"
 #eval answer $ day/"input.txt"
