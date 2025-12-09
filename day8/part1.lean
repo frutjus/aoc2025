@@ -1,5 +1,3 @@
-import Std.Data.HashMap
-
 -- general-purpose stuff
 def String.lines (str: String): List String :=
   str.replace "\r" ""
@@ -89,29 +87,23 @@ def List.with_indices (l: List α): List (α × Nat) :=
 -- puzzle-specific stuff
 def parse (input: String) :=
   input.lines.map (λl =>
-    l.toList.with_indices.filter (·.fst != '.')
-    |> Functor.map Prod.snd)
+    match l.splitOn "," with
+      | [x,y,z] => (x.toInt!, y.toInt!, z.toInt!)
+      | _ => panic! "station")
 
-partial def count_timelines (pos: Nat × Nat) (splitterses: List (List Nat)): StateM (Std.HashMap (Nat × Nat) Nat) Nat := do
-  let (r,c) := pos
-  if h: splitterses = [] then
-    return 1
-  else if let some memory := (← get)[pos]? then
-    return memory
-  else if (splitterses.head (by simp; apply h)).contains c then do
-    let count_left ← count_timelines (r+1,c-1) splitterses.tail
-    let count_right ← count_timelines (r+1,c+1) splitterses.tail
-    let count := count_left + count_right
-    modify (·.insert pos count)
-    return count
-  else do
-    let count ← count_timelines (r+1,c) splitterses.tail
-    modify (·.insert pos count)
-    return count
+def distance2: Int × Int × Int → Int × Int × Int → Int
+  | (x1,y1,z1), (x2,y2,z2) =>
+      (x1 - x2)^2
+    + (y1 - y2)^2
+    + (z1 - z2)^2
 
-def solve (input: return_type_of parse) := match input with
-  | [start] :: splitterses => (count_timelines (0,start) splitterses).run ∅ |> Prod.fst
-  | _ => panic! "bet you 100 bucks this'll never happen"
+def solve (input: return_type_of parse) :=
+  Prod.mk <$> input <*> input
+  |> List.filter (λ(a,b) => a ≠ b)
+  |> List.toArray
+  |> (Array.qsort · (λ(a,b) (c,d) => distance2 a b ≤ distance2 c d))
+  |> (Array.take · 1000)
+  |> Array.size
 
 def answer (filepath: System.FilePath): IO Unit := do
   let start_time ← IO.monoMsNow
@@ -126,6 +118,6 @@ def answer (filepath: System.FilePath): IO Unit := do
   let time_delta := end_time - start_time
   IO.println s!"\ntime (ms) = {time_delta}"
 
-def day: System.FilePath := "day7"
+def day: System.FilePath := "day8"
 #eval answer $ day/"sample.txt"
-#eval answer $ day/"input.txt"
+--#eval answer $ day/"input.txt"
