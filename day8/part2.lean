@@ -101,7 +101,7 @@ def distance2: Point → Point → Int
     + (y1 - y2)^2
     + (z1 - z2)^2
 
-abbrev Parms := Nat
+abbrev Parms := Unit
 def solve (input: return_type_of parse) (parms: Parms) :=
   let pairs := do
     let ts ← input.tails
@@ -111,11 +111,11 @@ def solve (input: return_type_of parse) (parms: Parms) :=
       pure (box1,box2)
     else panic! "this'll never happen"
   let shortest := pairs.mergeSort (λ(a,b) (c,d) => distance2 a b ≤ distance2 c d)
-    |> List.take parms
-  let circuits := Id.run do
+  let ((x1,_,_),(x2,_,_)) := Id.run do
     let mut next_circuit := 0
     let mut circuits: Std.HashMap Nat (Std.HashSet Point) := ∅
     let mut junctions: Std.HashMap Point Nat := ∅
+    let mut last_connection := default
     for (x,y) in shortest do
       match junctions[x]?, junctions[y]? with
         | none,    none    =>
@@ -123,12 +123,15 @@ def solve (input: return_type_of parse) (parms: Parms) :=
           junctions := junctions.insert y next_circuit
           circuits := circuits.insert next_circuit (Std.HashSet.ofList [x,y])
           next_circuit := next_circuit + 1
+          last_connection := (x,y)
         | some c1, none    =>
           junctions := junctions.insert y c1
           circuits := circuits.modify c1 (·.insert y)
+          last_connection := (x,y)
         | none,    some c2 =>
           junctions := junctions.insert x c2
           circuits := circuits.modify c2 (·.insert x)
+          last_connection := (x,y)
         | some c1, some c2 =>
           if c1 ≠ c2 then
             let points_to_move := circuits[c2]!
@@ -136,11 +139,9 @@ def solve (input: return_type_of parse) (parms: Parms) :=
               junctions := junctions.insert junction c1
             circuits := circuits.modify c1 (·.union points_to_move)
             circuits := circuits.erase c2
-    return circuits
-  circuits.values.map Std.HashSet.size
-  |> (List.mergeSort · (· ≥ ·))
-  |> List.take 3
-  |> List.foldl Mul.mul 1
+            last_connection := (x,y)
+    return last_connection
+  x1 * x2
 
 def answer (filepath: System.FilePath) (parms: Parms): IO Unit := do
   let start_time ← IO.monoMsNow
@@ -156,5 +157,5 @@ def answer (filepath: System.FilePath) (parms: Parms): IO Unit := do
   IO.println s!"\ntime (ms) = {time_delta}"
 
 def day: System.FilePath := "day8"
-#eval answer (day/"sample.txt") 10
-#eval answer (day/"input.txt") 1000
+#eval answer (day/"sample.txt") ()
+#eval answer (day/"input.txt") ()
